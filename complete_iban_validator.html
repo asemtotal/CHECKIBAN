@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IBAN Validator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            text-align: center;
+        }
+        h1 {
+            margin-top: 50px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        input {
+            width: 300px;
+        }
+        button {
+            background-color: #444;
+            color: #fff;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #888;
+        }
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .error {
+            color: #f00;
+        }
+    </style>
+    <script>
+        function validateIBAN(iban) {
+            // Normalize IBAN (remove spaces and convert to uppercase)
+            const cleanIBAN = iban.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+            // Rearrange IBAN (move first 4 characters to the end)
+            const rearrangedIBAN = cleanIBAN.slice(4) + cleanIBAN.slice(0, 4);
+
+            // Convert letters to numbers (A=10, B=11, ..., Z=35)
+            const numericIBAN = rearrangedIBAN.replace(/[A-Z]/g, char => (char.charCodeAt(0) - 55).toString());
+
+            // Validate checksum (mod 97)
+            try {
+                const ibanChecksum = BigInt(numericIBAN) % 97n;
+                return ibanChecksum === 1n;
+            } catch {
+                return false;
+            }
+        }
+
+        const bankDatabase = {
+            "NL": {
+                "ABNA": { name: "ABN AMRO Bank N.V.", bic: "ABNANL2A" },
+                "INGB": { name: "ING Bank N.V.", bic: "INGBNL2A" }
+            },
+            "DE": {
+                "DEUT": { name: "Deutsche Bank", bic: "DEUTDEFF" },
+                "DRES": { name: "Dresdner Bank", bic: "DRESDEFF" }
+            }
+        };
+
+        function getBankDetails(countryCode, bankCode) {
+            if (bankDatabase[countryCode] && bankDatabase[countryCode][bankCode]) {
+                return bankDatabase[countryCode][bankCode];
+            }
+            return null;
+        }
+
+        function checkIBAN() {
+            const ibanInput = document.getElementById('iban').value.trim();
+            const isValid = validateIBAN(ibanInput);
+
+            const resultElement = document.getElementById('result');
+            if (!isValid) {
+                resultElement.innerHTML = `IBAN: ${ibanInput} is <span class="error">Invalid</span>`;
+                return;
+            }
+
+            const countryCode = ibanInput.slice(0, 2);
+            const bankCode = ibanInput.slice(4, 8);
+            const bankDetails = getBankDetails(countryCode, bankCode);
+
+            if (bankDetails) {
+                resultElement.innerHTML = `
+                    <p>IBAN: ${ibanInput} is <span style="color: green;">Valid</span></p>
+                    <p>Bank: ${bankDetails.name}</p>
+                    <p>BIC: ${bankDetails.bic}</p>
+                `;
+            } else {
+                resultElement.innerHTML = `
+                    <p>IBAN: ${ibanInput} is <span style="color: green;">Valid</span></p>
+                    <p>Bank details not found.</p>
+                `;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>IBAN Validator</h1>
+    <input type="text" id="iban" placeholder="Enter IBAN" />
+    <button onclick="checkIBAN()">Validate</button>
+    <div id="result"></div>
+</body>
+</html>
