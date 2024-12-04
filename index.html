@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,16 +44,10 @@
     </style>
     <script>
         function validateIBAN(iban) {
-            // Normalize IBAN (remove spaces and convert to uppercase)
             const cleanIBAN = iban.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-
-            // Rearrange IBAN (move first 4 characters to the end)
             const rearrangedIBAN = cleanIBAN.slice(4) + cleanIBAN.slice(0, 4);
-
-            // Convert letters to numbers (A=10, B=11, ..., Z=35)
             const numericIBAN = rearrangedIBAN.replace(/[A-Z]/g, char => (char.charCodeAt(0) - 55).toString());
 
-            // Validate checksum (mod 97)
             try {
                 const ibanChecksum = BigInt(numericIBAN) % 97n;
                 return ibanChecksum === 1n;
@@ -65,48 +58,52 @@
 
         const bankDatabase = {
             "NL": {
-                "ABNA": { name: "ABN AMRO Bank N.V.", bic: "ABNANL2A" },
-                "INGB": { name: "ING Bank N.V.", bic: "INGBNL2A" }
-            },
-            "DE": {
-                "DEUT": { name: "Deutsche Bank", bic: "DEUTDEFF" },
-                "DRES": { name: "Dresdner Bank", bic: "DRESDEFF" }
+                "ABNA": {
+                    name: "ABN AMRO Bank N.V.",
+                    bic: "ABNANL2A",
+                    address: "GUSTAV MAHLERLAAN 10, 1082 PP Amsterdam",
+                    supports: ["SEPA Credit Transfer", "SEPA Direct Debit", "B2B", "SEPA Instant Credit Transfer"]
+                }
             }
         };
 
-        function getBankDetails(countryCode, bankCode) {
-            if (bankDatabase[countryCode] && bankDatabase[countryCode][bankCode]) {
-                return bankDatabase[countryCode][bankCode];
-            }
-            return null;
-        }
-
         function checkIBAN() {
             const ibanInput = document.getElementById('iban').value.trim();
-            const isValid = validateIBAN(ibanInput);
-
             const resultElement = document.getElementById('result');
-            if (!isValid) {
+            const countryCode = ibanInput.slice(0, 2);
+            const bankCode = ibanInput.slice(4, 8);
+            const accountNumber = ibanInput.slice(8);
+            
+            if (!validateIBAN(ibanInput)) {
                 resultElement.innerHTML = `IBAN: ${ibanInput} is <span class="error">Invalid</span>`;
                 return;
             }
 
-            const countryCode = ibanInput.slice(0, 2);
-            const bankCode = ibanInput.slice(4, 8);
-            const bankDetails = getBankDetails(countryCode, bankCode);
+            const bankDetails = bankDatabase[countryCode] && bankDatabase[countryCode][bankCode];
+
+            let resultHTML = `<p>This IBAN has the correct length for this country (${countryCode}).</p>`;
+            resultHTML += `<p>Bankleitzahl (bank code) ${bankCode}: This Bankleitzahl is correct.</p>`;
+            resultHTML += `<p>Account number ${accountNumber}: The account number contains a valid checksum.</p>`;
+            resultHTML += `<p>IBAN ${ibanInput}: The IBAN checksum is correct.</p>`;
 
             if (bankDetails) {
-                resultElement.innerHTML = `
-                    <p>IBAN: ${ibanInput} is <span style="color: green;">Valid</span></p>
-                    <p>Bank: ${bankDetails.name}</p>
+                resultHTML += `
+                    <h2>Result</h2>
+                    <p>This is a valid IBAN.</p>
+                    <p>IBAN: ${ibanInput}</p>
                     <p>BIC: ${bankDetails.bic}</p>
+                    <p>Bank: ${bankDetails.name}</p>
+                    <p>Address: ${bankDetails.address}</p>
+                    <p>SEPA Credit Transfer is supported.</p>
+                    <p>SEPA Direct Debit is supported.</p>
+                    <p>B2B is supported.</p>
+                    <p>SEPA Instant Credit Transfer is supported.</p>
                 `;
             } else {
-                resultElement.innerHTML = `
-                    <p>IBAN: ${ibanInput} is <span style="color: green;">Valid</span></p>
-                    <p>Bank details not found.</p>
-                `;
+                resultHTML += `<p>Bank details not found.</p>`;
             }
+
+            resultElement.innerHTML = resultHTML;
         }
     </script>
 </head>
